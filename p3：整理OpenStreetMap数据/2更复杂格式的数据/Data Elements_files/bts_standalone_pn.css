@@ -1,0 +1,37 @@
+html {
+  margin: 0;
+  height: 100%; }
+  html body {
+    margin: 0;
+    height: 100%; }
+    html body #header {
+      width: 100%;
+      height: auto;
+      min-height: 100px;
+      font-weight: 100; }
+      html body #header #logo-sitename {
+        margin-left: auto;
+        margin-right: auto; }
+        html body #header #logo-sitename .menu-wrapper {
+          right: 0;
+          width: 100%; }
+          html body #header #logo-sitename .menu-wrapper ul.nav {
+            padding-left: 0;
+            margin: 0; }
+            html body #header #logo-sitename .menu-wrapper ul.nav > li a {
+              font-weight: 100; }
+            html body #header #logo-sitename .menu-wrapper ul.nav > li:first-child {
+              margin-left: -10px;
+              width: 25%; }
+            html body #header #logo-sitename .menu-wrapper ul.nav > li:nth-child(2) {
+              width: 30%; }
+            html body #header #logo-sitename .menu-wrapper ul.nav > li:nth-child(3) {
+              width: 28%; }
+              html body #header #logo-sitename .menu-wrapper ul.nav > li:nth-child(3) div.mega-menu {
+                right: 17.3%; }
+            html body #header #logo-sitename .menu-wrapper ul.nav > li:nth-child(4) {
+              width: 15%; }
+              html body #header #logo-sitename .menu-wrapper ul.nav > li:nth-child(4) div.mega-menu {
+                right: 1.8%; }
+
+/*# sourceMappingURL=bts_standalone_pn.css.map */

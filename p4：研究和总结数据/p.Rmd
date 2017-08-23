@@ -1,0 +1,517 @@
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(message = FALSE, warning = FALSE, echo = FALSE)
+
+```
+
+#红葡萄酒质量数据探究
+========================================================
+
+```{r echo=FALSE, message=FALSE, warning=FALSE,  packages}
+# Load all of the packages that you end up using
+# in your analysis in this code chunk.
+
+# Notice that the parameter "echo" was set to FALSE for this code chunk.
+# This prevents the code from displaying in the knitted HTML output.
+# You should set echo=FALSE for all code chunks in your file.
+
+library(ggplot2)
+library(dplyr)
+library(GGally)
+library(scales)
+library(memisc)
+library(reshape)
+library(gridExtra)
+```
+
+
+```{r echo=FALSE, Load_the_Data}
+# Load the Data
+wq <- read.csv('wineQualityReds.csv')
+
+```
+
+## 简介
+本项目主要探究红葡萄酒质量数据集，目的是探究哪些化学物质影响红葡萄酒的质量。使用统计软件R探索数据。
+
+## 单一变量部分
+以下是数据集的一些常见统计信息:
+```{r echo=FALSE}
+#汇总统计
+str(wq)
+summary(wq)
+```
+
+由于我们主要探索质量，所以专门看下“质量”的情况：
+```{r echo=FALSE}
+summary(wq$quality)
+```
+
+有一些初步的观察：
+ *  有1599组数据，每组数据包含13个变量。
+ * x应该是标识符。
+ * 质量是结果，分为0-10级，至少由3名专家评选，值从3到8，平均值5.6，中位数是6。
+```{r echo=FALSE}
+#规范数据集的质量数据，试制更易于后期绘图
+wq$quality <- factor(wq$quality, ordered = T)
+
+table(wq$quality)
+```
+
+以下是12个变量的直方图，对数据有个直观感受：
+```{r echo=FALSE}
+qplot(wq$quality)
+             
+```
+
+因为主要分析的就是影响葡萄酒质量的因素，所以首先看一下葡萄酒质量的分布状况。
+可以看出：葡萄酒质量评分分布在3-8，绝大部分分布在5和6，整体有正态分布的趋势。
+
+```{r echo=FALSE}
+qplot(wq$fixed.acidity)
+```
+
+fixed.acidity固定酸度图形也有点正太分布，但是跟质量曲线区别较大，这个偏向左侧。
+可能跟质量有一定关系；
+
+```{r echo=FALSE}
+qplot(wq$volatile.acidity)
+```
+
+volatile.acidity挥发酸度图形也有点正太分布，但是跟质量曲线区别较大，偏向左侧。
+跟固定酸度应该有挺大关系，可能跟质量也有一定关系，需要进一步探究；
+
+
+```{r echo=FALSE}
+qplot(wq$citric.acid)
+```
+
+citric.acid柠檬酸的趋势不明显，严重偏向左侧，但是不连续，跟同是酸类的 固定酸度和挥发性酸度 图形区别较大；
+数据可能是缺失或者有问题；
+
+
+```{r echo=FALSE}
+qplot(wq$residual.sugar)
+```
+
+residual.sugar残余糖分图形集中度较好，集中在1-3，且有些较大的离散值，与质量曲线差异较大，应该关联不大；
+
+```{r echo=FALSE}
+qplot(wq$chlorides)
+```
+
+chlorides氯化物图形集中度较好，集中在0.05--0.12，且有些较大的离散值，与质量曲线差异较大，应该关联不大；
+
+
+```{r echo=FALSE}
+qplot(wq$free.sulfur.dioxide)
+```
+
+free.sulfur.dioxide游离二氧化硫整体偏向左侧，且数据不连续，与质量曲线差异较大，应该关联不大；
+
+
+```{r echo=FALSE}
+qplot(wq$total.sulfur.dioxide)
+```
+
+total.sulfur.dioxide总二氧化硫图形整体严重偏向左侧，与质量曲线差异较大，应该关联不大；
+
+
+```{r echo=FALSE}
+qplot(wq$density)
+```
+
+density密度图形整体符合正态分布，与质量图形非常相似，需要重点探究，应该与质量关联较大；
+
+```{r echo=FALSE}
+qplot(wq$pH)
+```
+
+ph图形整体符合正态分布，与质量图形非常相似，需要重点探究，应该与质量关联较大；
+
+```{r echo=FALSE}
+qplot(wq$sulphates)
+```
+
+sulphates硫酸盐图形整体有正态分布的趋势，但是严重偏向左侧，且有大量长尾数据，估计跟质量有些关联，但是应该不是强关联，需要进一步探究；
+
+```{r echo=FALSE}
+qplot(wq$alcohol)
+```
+
+alcohol酒精图形整体偏向左侧，与质量曲线差异较大，应该关联不大；
+
+
+#####小结：
+ * 查看这些直方图，发现 密度，ph 与 质量的图形很相似，似乎有些关联；
+ * 其他的图形一般都偏向左侧；
+ * 这是第一步猜想，需要进一步探究；
+
+
+
+
+## 单变量分析
+
+### 您的数据集的结构是什么？
+有13个变量组成的1599个数据；
+x是唯一标识符；
+其他12个变量是：fixed.acidity, volatile.acidity, citric.acid, residual.sugar, chlorides, free.sulfur.dioxide, total.sulfur.dioxide, density, pH, sulphates, alcohol, quality；
+
+### 数据集中的主要变量是什么？
+最主要的变量是 quality质量，也是这次分析的主要目标；
+得分从0-10，大部分数据集中在5-6，分布接近正态分布；
+
+
+### What other features in the dataset do you think will help support your investigation into your feature(s) of interest?
+从直方图可知，density和pH跟质量图形非常相似；
+Fixed、volatile acidity、free and total sulphur dioxide、sulphates、alcohol图形是偏斜而且长尾的；
+
+
+### Did you create any new variables from existing variables in the dataset?
+新建立了一个指标“rating”：质量评级，把葡萄酒质量分为优质“good”（质量分7-10）、均质“average”（质量分5-6）、差“bad”（质量分0-4）
+```{r echo=FALSE}
+wq$rating <- ifelse(wq$quality < 5, 'bad', ifelse(
+  wq$quality < 7, 'average', 'good'))
+
+wq$rating <- ordered(wq$rating,
+                     levels = c('bad', 'average', 'good'))
+summary(wq$rating)
+
+```
+
+
+```{r echo=FALSE}
+qplot(wq$rating)
+
+```
+
+
+#### Of the features you investigated, were there any unusual distributions? Did you perform any operations on the data to tidy, adjust, or change the form of the data? If so, why did you do this?
+citric acid的分布不太正常，因为与同是酸度的fixed acidity 和 volatile acidity的分布不一致，后2个分布符合ph的正态分布；
+citric acid 应该是缺失了大量数据，或者部分数据不可用导致，具体可以看下图：
+```{r echo=FALSE}
+grid.arrange(ggplot(aes(fixed.acidity), data = wq) +
+               geom_histogram() + scale_x_log10(),
+             ggplot(aes(volatile.acidity), data = wq) +
+               geom_histogram() + scale_x_log10(),
+             ggplot(aes(citric.acid), data = wq) +
+               geom_histogram() + scale_x_log10(),
+             ncol = 1 )
+
+```
+
+
+# Bivariate Plots Section
+
+## 箱线图
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, fixed.acidity), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)
+
+```
+ 
+图中可以看到，随着葡萄酒质量评级的提高，fixed acidity随着提高，说明很可能fixed acidity跟质量是正相关的；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, volatile.acidity), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，volatile acidity随着规律性的降低，说明很可能volatile acidity 跟质量是 负相关的；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, citric.acid), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(0, 0.85))
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，citric acid随着提高，说明很可能citric acid跟质量是正相关的；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, residual.sugar), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(1, 6))
+
+```
+
+排除了较大的离散值后，从图中可以看到，随着葡萄酒质量评级的提高，residual  sugar也同样升高，但是趋势不太明显，而且还是有很多离散值存在，说明residual sugar可能与葡萄酒质量之间有正相关性，但相关强度应该不大；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, chlorides), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(0.025, 0.12))
+
+```
+
+排除较大的离散值后，从图中可以看到，随着葡萄酒质量评级的提高，chlorides含量先升后降，没有明显的规律性变化，说明很可能chlorides与葡萄酒质量之间并没有较强相关性；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, free.sulfur.dioxide), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(0, 60))
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，residual  sugar先变大后变小，没有规律性变化，说明很可能residual sugar与葡萄酒质量之间并没有相关性；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, total.sulfur.dioxide), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(0, 180))
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，total sulfur dioxide先变大后变小，没有规律性变化，说明很可能total sulfur dioxide与葡萄酒质量之间并没有相关性；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, density), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，density先变大后变小，没有规律性变化，说明很可能total sulfur dioxide与葡萄酒质量之间并没有相关性；
+单变量分析中，以为density跟质量有较大关联，现在看来并没有；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, pH), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，pH 随着规律性的降低，说明很可能pH 跟质量是 负相关的
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, sulphates), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)+
+  coord_cartesian(ylim = c(0.25, 1.8))
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，sulphates随着提高，说明很可能sulphates跟质量是正相关的；
+
+```{r echo=FALSE}
+
+ggplot(aes(rating, alcohol), data = wq) +
+  geom_jitter( alpha = 0.3)  +
+  geom_boxplot( alpha = 0.5)
+
+```
+
+图中可以看到，随着葡萄酒质量评级的提高，alcohol随着提高，说明很可能alcohol 跟质量是正相关的；
+
+##### 小结：
+ * 好像 fixed acidity, citric acid, sulphates ， alcohol 跟质量是正相关的；
+ * volatile acidity ， pH 跟质量是 负相关的；
+ * density跟单变量分析结果不同，似乎不起作用；
+ 
+ 
+ 
+###相关性
+```{r echo=FALSE}
+corr <- NULL
+
+for (i in names(wq)){
+  corr[i] <- cor.test(as.numeric(wq[,i]), 
+                      as.numeric(wq$quality))$estimate
+  }
+
+corr
+
+```
+
+以下的变量与葡萄酒质量相关性较高：
+ * alcohol: 47.6%
+ * sulphates : 25.1%
+ * citric acid: 22.6%
+ * fixed acidity: 12.4%
+ * volatile acidity: -39.1%
+ * density: -17.5%
+
+
+
+
+
+
+# Bivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. How did the feature(s) of interest vary with other features in the dataset?
+从箱线图中可以看出，fixed acidity, citric acid, sulphates ， alcohol
+与葡萄酒质量直接相关，volatile acidity ， pH 跟质量是负相关的。 
+从相关性测试中，观察到类似的趋势；
+
+#### Did you observe any interesting relationships between the other features (not the main feature(s) of interest)?
+sulfur dioxide（二氧化硫）有点意思，与total 和free sulfur dioxide 高度相关，很容易理解，但是它们却跟 sulphates（硫酸盐） 不相关。
+
+#### What was the strongest relationship you found?
+与质量的关系（相关性）强弱的是这些：
+ * alcohol: 47.6%
+ * sulphates : 25.1%
+ * citric acid: 22.6%
+ * fixed acidity: 12.4%
+ * volatile acidity: -39.1%
+ * density: -17.5%
+
+
+
+
+# Multivariate Plots Section
+主要研究与质量相关的4个特征：alcohol，sulphates，citric.acid，volatile.acidity
+```{r echo=FALSE}
+  
+ggplot(aes(x = citric.acid, y = volatile.acidity, color = factor(quality)), data = wq) +
+  geom_jitter(alpha = 0.2) +
+  scale_color_brewer(palette = "Blues") +
+  geom_smooth(method = "lm", se = FALSE,size=1) +
+  labs(y = 'volatile.acidity',x = 'citric.acid') +
+  ggtitle("Volatile.acidity  VS  Citric.acid VS  quality") 
+
+ggplot(aes(x = alcohol, y = log10(sulphates), color = factor(quality)), data = wq) +
+  geom_jitter(alpha = 0.2) +
+  scale_color_brewer(palette = "Blues") +
+  geom_smooth(method = "lm", se = FALSE,size=1) +
+  labs(y = 'log10(sulphates)',x = 'alcohol') +
+  ggtitle("Log10(sulphates)  VS  Alcohol VS  quality")
+
+ggplot(aes(x = pH, y = alcohol, color = factor(quality)), data = wq) +
+  geom_jitter(alpha = 0.2) +
+  scale_color_brewer(palette = "Blues") +
+  geom_smooth(method = "lm", se = FALSE,size=1) +
+  labs(y = 'alcohol',x = 'pH') +
+  ggtitle("Alcohol  VS  PH VS  quality")
+```
+
+
+
+
+
+# Multivariate Analysis
+
+#### Talk about some of the relationships you observed in this part of the investigation. Were there features that strengthened each other in terms of looking at your feature(s) of interest?
+多变量图，通过把质量分数分图，通过3个评级类别进行分析，可以看到，较高的alcohol, sulphates, citric acid,  fixed acidity，较低的volatile acidity可以产生更高质量的葡萄酒。
+
+
+#### Were there any interesting or surprising interactions between features?
+ph对质量的影响很小，这个很意外；
+
+
+#### OPTIONAL: Did you create any models with your dataset? Discuss the strengths and limitations of your model.
+no
+
+------
+
+
+
+# Final Plots and Summary
+
+
+### Plot One：acid 影响葡萄酒质量
+```{r echo=FALSE}
+grid.arrange(ggplot(data = wq, aes(x = quality, y = fixed.acidity, fill = quality)) +
+               scale_fill_brewer(palette = "Blues")+
+               xlab('Quality') +
+               ylab('Fixed Acidity') +
+               geom_boxplot(),
+             ggplot(data = wq, aes(x = quality, y = volatile.acidity, fill = quality)) +
+               scale_fill_brewer(palette = "Blues")+
+               xlab('Quality') +
+               ylab('Volitile  Acidity') +
+               geom_boxplot(),
+             ggplot(data = wq, aes(x = quality, y = citric.acid, fill = quality)) +
+               scale_fill_brewer(palette = "Blues")+
+               xlab('Quality') +
+               ylab('Citric Acidity') +
+               geom_boxplot(),
+             ggplot(data = wq, aes(x = quality, y = pH, fill = quality)) +
+               scale_fill_brewer(palette = "Blues")+
+               xlab('Quality') +
+               ylab('PH') +
+               geom_boxplot())
+               
+```
+
+
+
+### Description One
+ * 这些图是为了说明酸和ph对葡萄酒质量的影响；
+ * 一般来说，高质量的葡萄酒有较高的酸acid或更低的ph；
+ * 其中柠檬酸citric acid 的影响更大，固定酸fixed acid 影响较小；
+ * 但是，挥发性酸volatile acidity不利于葡萄酒质量；
+
+
+
+
+### Plot Two：Alcohol影响葡萄酒质量
+```{r echo=FALSE}
+ggplot(data = wq, aes( x = quality, y = alcohol, fill = rating)) +
+  geom_boxplot() +
+  scale_fill_brewer(palette = "Blues")+
+  xlab('Alcohol') +
+  ylab('Volatile Acidity')
+  
+         
+```
+
+#### Description Two
+ * 这里想说明酒精alcohol对葡萄酒质量的影响；
+ * 一般来说，高质量葡萄酒含有较高的酒精含量，但是单独看酒精对质量的影响并不是那么强；
+
+
+#### Plot Three 究竟什么影响葡萄酒质量
+```{r echo=FALSE}
+ggplot(data = subset(wq, rating != 'average'),
+       aes(x = alcohol, y = volatile.acidity, color = rating)) +
+  geom_point() +
+  xlab('Alcohol') +
+  ylab('Volatile Acidity')
+
+
+```
+
+#### Description Three
+图中去掉了 中级葡萄酒的影响，也没有采用以上通用的渐变色表达，因为渐变色不明显，看不清楚，现在可以更明显的看到：
+ * 高酒精含量alcohol  和 低挥发性酸度volatile acid 组合起来，可以产生更优质的葡萄酒；
+
+
+------
+
+
+# Reflection
+
+对红酒质量数据集的探索性数据分析很有意思，此数据集也比较适合，数据大小适中，规律相对比较明显；
+单变量分析时，对各变量都进行了探索，ph，密度，固定酸度，挥发性酸度，硫酸盐，酒精。
+后来双变量分析时越来越清晰，
+最后多变量分析时，明确了高酒精含量 和 低挥发性酸度，对葡萄酒质量影响非常大；
+
+挫折或成功：在单变量分析时，以为密度会对葡萄酒质量有较大的关联，但是通过双变量分析，发现并没有神马关系，
+考虑问题还是要多一个维度，会更加的客观，发现真相。
+
+提议：可以收集白酒和其他酒类的相关影响因素数据，看看是否影响酒类的因素都是一样的，这样对酒类的了解就更加全面了，也有利于指导酒类生产；
+
+有一点也需要说明，这个质量的评级是有主观性的，所以这里的结论也只是一个有趣的观点和视角，
+不完全代表影响葡萄酒质量的真实原因。
+
+
+
+
