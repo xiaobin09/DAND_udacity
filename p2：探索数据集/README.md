@@ -1,6 +1,6 @@
 1,2,3是课程学习笔记和做的习题
 
-项目文件在p2文件夹
+项目文件在p2文件夹的[p2.md](https://github.com/xiaobin09/DAND_udacity/blob/master/p2%EF%BC%9A%E6%8E%A2%E7%B4%A2%E6%95%B0%E6%8D%AE%E9%9B%86/p2/p2.md )
 
 ### 项目介绍
 对于这个项目，你需要进行数据分析，并创建一个文档分享你的发现。
